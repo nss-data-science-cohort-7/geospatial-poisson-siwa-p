@@ -91,7 +91,7 @@ Has the same number of entries as burglaries_zip. Used a left_join
 Q. Does it contain all census tracts?
 NO
 
-WIth a full_join 
+With a full_join 
 
 ```{r}
 burglaries_census_merged |>
@@ -114,38 +114,65 @@ Which census tract had the highest number of burglaries? Which census tract had 
 burglaries_census_merged |>
   group_by(TRACTCE) |>
   count() |>
-  arrange(desc(n))
+  arrange(desc(n)) |>
+  head(20)
 ```
 
 
 Tract 016000 has the highest number of burglaries in total.
 
+To count incident number rather than entries
+
 ```{r}
 burglaries_census_merged |>
-  group_by(TRACTCE) |>
+  group_by(TRACTCE, incident_number) |>
   count() |>
-  mutate(count_per_1000_residents = n / population)
+  arrange(desc(n)) |>
+  head(20)
 ```
-```{r}
-is_numeric_result <- burglaries_census_merged %>%
-  summarise(is_numeric = is.numeric(population))
-```
+Tract 015100 has the highest number of burglary incidents
 
-This returned true.
 
-so why the error?
 ```{r}
 burglaries_census_merged |>
-  group_by(TRACTCE) |>
-  count() |>
-  mutate(count_per_1000_residents = n / burglaries_census_merged$population) |>
-  arrange(desc(n))
+  group_by(TRACTCE,incident_number,population) |>
+  count()|>
+  mutate(count_per_1000_residents = 1000*n / population)|>
+  arrange(desc(count_per_1000_residents)) |>
+  head(20)
 ```
+There are two tracts with zero population (from census data)
+
+Ignoring those, tract 015100 has the highest number of burglaries per 1000 residents.
+
+
+
+There are a few entries with only non-null census information (inspecting the burglaries_census_merged dataframe)
+
+Q. We're interested in the relationship between median income and number of aggravated burglaries, so examine those variables on their own and together to see what you can find. You may want to perform additional calculations, create plots, etc.
+
 ```{r}
-burglaries_census_merged |>
-  group_by(TRACTCE) |>
+burglaries_census_merged_aggravated <- burglaries_census_merged|>
+  filter(grepl('AGGRAVATED', offense_description))
+```
+Seems like this was unnecessary as it did not lower the dataframe dimensions (all the entries are aggravated burglaries)
+
+```{r}
+burglaries_census_merged_grouped <- burglaries_census_merged |>
+  group_by(TRACTCE,median_income, incident_number, population) |>
   count() |>
-  arrange(desc(n))
+  mutate(count_per_1000_residents = 1000*n / population)|>
+  arrange(desc(count_per_1000_residents)) |>
+  filter(population!=0, complete.cases(incident_number))
 ```
 
+Now, I have a grouped dataframe that contains number of burglaries per 1000 residents and median income columns
+
+```{r}
+burglaries_census_merged_grouped |>
+  ggplot(aes(x=count_per_1000_residents, y=median_income)) +
+  geom_point()
+```
+
+Higher number of burglaries generally occur in low median_income tracts
 
