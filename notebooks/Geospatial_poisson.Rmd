@@ -168,6 +168,7 @@ burglaries_census_merged_grouped <- burglaries_census_merged |>
 
 Now, I have a grouped dataframe that contains number of burglaries per 1000 residents and median income columns
 
+
 ```{r}
 burglaries_census_merged_grouped |>
   ggplot(aes(x=count_per_1000_residents, y=median_income)) +
@@ -175,4 +176,18 @@ burglaries_census_merged_grouped |>
 ```
 
 Higher number of burglaries generally occur in low median_income tracts
+
+Looks like an exponential decay trend
+
+```{r}
+burglaries_census_merged_grouped <- burglaries_census_merged_grouped |>
+  mutate(Log_median_income = log(median_income))
+```
+
+```{r}
+burglaries_census_merged_grouped |>
+  ggplot(aes(x=count_per_1000_residents, y=Log_median_income)) +
+  geom_point()
+```
+Not a straight line. Therefore not an exponential decay
 
