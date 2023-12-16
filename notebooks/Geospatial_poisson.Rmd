@@ -168,40 +168,58 @@ burglaries_census_merged_grouped <- burglaries_census_merged |>
 
 Now, I have a grouped dataframe that contains number of burglaries per 1000 residents and median income columns
 
-
+```{r}
+burglaries_census_merged_grouped |> 
+  ggplot(aes(x = median_income)) + 
+  geom_bar(width = 1000)
+```
+```{r}
+burglaries_census_merged_grouped |> 
+  ggplot(aes(x = n)) + 
+  geom_bar(width = NULL)
+```
+The distribution of count (number of burglaries is heavily right skewed)
 ```{r}
 burglaries_census_merged_grouped |>
-  ggplot(aes(x=median_income, y=count_per_1000_residents)) +
+  ggplot(aes(x=median_income, y=n)) +
   geom_point()
 ```
 
 Higher number of burglaries generally occur in low median_income tracts. But low median income tracts do not necessarily have high burglary rates
 
-Possibly an exponential decay trend?
-
-```{r}
-burglaries_census_merged_grouped <- burglaries_census_merged_grouped |>
-  mutate(Log_median_income = log(median_income))
-```
-
-```{r}
-burglaries_census_merged_grouped |>
-  ggplot(aes(x=Log_median_income, y=count_per_1000_residents)) +
-  geom_point()
-```
-Not an exponential decay
 
 part 3
-
-
-```{r}
-burglaries_census_merged_grouped_lm <- lm("count_per_1000_residents ~ median_income", data = burglaries_census_merged_grouped)
-```
-
+Poisson Distribution :
+  Count data
+  with log(population) as offset
 
 ```{r}
-summary(burglaries_census_merged_grouped_lm)
+burglaries_census_merged_grouped_pr <- glm("n ~ median_income", 
+                                           data = burglaries_census_merged_grouped,
+                                           family = poisson,
+                                           offset = log(population))
 ```
+
 ```{r}
-coef(burglaries_census_merged_grouped_lm)
+summary(burglaries_census_merged_grouped_pr)
 ```
+
+```{r}
+est_df <- tibble(
+  median_income = seq(from = min(burglaries_census_merged_grouped$median_income, na.rm = TRUE), 
+                          to = max(burglaries_census_merged_grouped$median_income, na.rm = TRUE), 
+                          length.out = 887),
+  population = burglaries_census_merged_grouped$population
+    )
+
+est_df <- est_df |> 
+  bind_cols(predict(burglaries_census_merged_grouped_pr, newdata = est_df, type = "response")) |> 
+  rename("Estimated Mean Runs Per Game" = "...3")
+
+burglaries_census_merged_grouped |> 
+  ggplot(aes(x = median_income, y = `n`)) +
+  geom_point() +
+  geom_line(data = est_df, aes(x = median_income, y = `Estimated Mean Runs Per Game`))
+```
+
+Not sure what's happening here!!
